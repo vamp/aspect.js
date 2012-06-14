@@ -2,28 +2,80 @@
 
 ##How to use?
 
+object case:
+
 ```javascript
-var scope = {invoke: function(variable){
-  return variable;
+var scope = {resolveState: function(state){
+  return state ? 'VALID' : 'INVALID';
 }};
 
-Aspect(scope)
-  .before('invoke', function(variable){
-    // here is aspect BEFORE "invoke" in scope
-    console.log("given argument for invoke function is: ", variable);
-  }).after('invoke', function(invokeResult, variable){
-    //  here is aspect AFTER "invoke" in scope
-    console.log("initial invoke result with argument ", variable, " is ", invokeResult);
-    return invokeResult * 2;
-  }).around('invoke', function(innerFunction, args){
-    //  here is aspect AROUND "invoke" in scope (we do not change arguments and initial function)
-    return innerFunction.apply(this, args);
-  });
 
-// and not we call method
-scope.invoke(25)
+Aspect(scope)
+	// before sample
+	.before('resolveState',
+		// log input parameter
+		function(state){
+			console.log('scope.resolveState(', state, ') called');
+		},
+
+		// basic filtration (breaks function execution if any value returns and return this value as function result)
+		// add this before "log"
+		function(state){
+			if(state!==true && state!==false){
+				return "Invalid parameter 'state' for resolveState function";
+			}
+		}
+	)
+
+	// around sample
+	.around('resolveState', function(innerFunction, args){
+		// invert "state" parameter
+		console.log("invert state parameter from '", args[0], "' to '", !args[0], "'");
+		return innerFunction.call(this, !args[0]);
+	})
+
+	// after sample
+	// only log arguments & result
+	.after('resolveState', function(result, state){
+		console.log('scope.resolveState(', state, ') = ', result);
+	})
 ```
-also supports filtration (if specified after/before aspect returns false - function execution will breaks)
+
+Function case:
+```javascript
+
+// Using in function case:
+var pow = function(variable){
+  return variable * variable;
+};
+
+
+// create new function (also you can reassing existing)
+var tripplePow = Aspect(pow).before(function(variable){
+	console.log("POW(", variable, ") called");
+}).after(function(result, variable){
+	return result*variable;
+});
+
+```
+
+Additional features:
+```javascript
+
+// After first aspect call on function you can use next syntax:
+scope.resolveState.after(function(){
+  // here is your logic
+});
+
+// Getting list of handlers
+var afterHandlers = tripplePow.after.valueOf();
+
+// Remove all handlers
+for(var i=0, j=afterHandlers.length; i<j; i++){
+  tripplePow.after.remove(afterHandlers[i]);
+}
+```
+
 
 ##Extensibility
 * Add or remove function using Aspect() using add/remove functions
